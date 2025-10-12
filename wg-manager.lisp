@@ -201,7 +201,8 @@ exec sbcl \
              (error "Peer with name ~s already exists!" name))
             ((null ipv4)
              (setf ipv4 (getf peer :ipv4))))
-      (postmodern:query (:delete-from 'peers :where (:= 'name (getf peer :name)))))
+      (when peer
+        (postmodern:query (:delete-from 'peers :where (:= 'name (getf peer :name))))))
     (unless ipv4
       (setf ipv4 (generate-next-ipv4)))
     (unless public-key
