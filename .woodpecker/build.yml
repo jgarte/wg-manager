@@ -1,0 +1,22 @@
+when:
+  event: [tag, manual]
+steps:
+  build:
+    image: shinmera/trial-deployment
+    commands: |
+      sbcl-lin --non-interactive \
+               --eval "(push \"$CI_WORKSPACE\" ql:*local-project-directories*)" \
+               --eval '(ql:quickload :wg-manager)'
+      sbcl-lin --non-interactive \
+               --eval "(push \"$CI_WORKSPACE\" ql:*local-project-directories*)" \
+               --eval '(asdf:make :wg-manager)'
+      mv wg-manager wg-manager.run
+  release:
+    when:
+      event: [tag]
+    image: woodpeckerci/plugin-release
+    settings:
+      files:
+        - wg-manager.run
+      api_key:
+        from_secret: DEPLOY_TOKEN
