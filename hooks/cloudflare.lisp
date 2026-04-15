@@ -1,12 +1,5 @@
 #|
-exec sbcl \
-  --noinform \
-  --disable-debugger \
-  --eval "(asdf:load-system '(drakma alexandria com.inuoe.jzon) :verbose NIL)" \
-  --load "$0" \
-  --eval "(wg-manager.cloudflare::main)" \
-  --quit \
-  --end-toplevel-options "${@:1}"
+exec $WG_MANAGER run "$0" "$@"
 |#
 
 (defpackage #:wg-manager.cloudflare
@@ -47,24 +40,28 @@ exec sbcl \
 (defun main ()
   (destructuring-bind (self change ipv4 name &optional public-key note) sb-ext:*posix-argv*
     (declare (ignore self public-key))
-    (setf *zone* (uiop:getenv "WG_CLOUDFLARE_ZONE"))
-    (setf *bearer* (uiop:getenv "WG_CLOUDFLARE_BEARER"))
-    (setf *suffix* (uiop:getenv "WG_CLOUDFLARE_SUFFIX"))
-    (let* ((name (format NIL "~a~@[.~a~]" (sanitize name) *suffix*))
-           (data `(("content" . ,ipv4)
-                   ("name" . ,name)
-                   ("proxied" . NIL)
-                   ("type" . "A")
-                   ("comment" . ,(or note 'null))
-                   ("ttl" . 1))))
-      (cond ((string-equal change "add")
-             (call :post (format NIL "zones/~a/dns_records" *zone*) data))
-            ((string-equal change "remove")
-             (let ((record (find-record name)))
-               (when record
-                 (call :delete (format NIL "zones/~a/dns_records/~a" *zone* record)))))
-            ((string-equal change "edit")
-             (let ((record (find-record name)))
-               (if record
-                   (call :put (format NIL "zones/~a/dns_records/~a" *zone* record) data)
-                   (call :post (format NIL "zones/~a/dns_records" *zone*) data))))))))
+    (setf *zone* (or (uiop:getenv "WG_CLOUDFLARE_ZONE") ""))
+    (setf *bearer* (or (uiop:getenv "WG_CLOUDFLARE_BEARER") ""))
+    (setf *suffix* (or (uiop:getenv "WG_CLOUDFLARE_SUFFIX") ""))
+    (if (string= "" *bearer*)
+        (format *error-output* "~& Skipping Cloudflare hook: WG_CLOUDFLARE_BEARER unset.~%")
+        (let* ((name (format NIL "~a~@[.~a~]" (sanitize name) *suffix*))
+               (data `(("content" . ,ipv4)
+                       ("name" . ,name)
+                       ("proxied" . NIL)
+                       ("type" . "A")
+                       ("comment" . ,(or note 'null))
+                       ("ttl" . 1))))
+          (cond ((string-equal change "add")
+                 (call :post (format NIL "zones/~a/dns_records" *zone*) data))
+                ((string-equal change "remove")
+                 (let ((record (find-record name)))
+                   (when record
+                     (call :delete (format NIL "zones/~a/dns_records/~a" *zone* record)))))
+                ((string-equal change "edit")
+                 (let ((record (find-record name)))
+                   (if record
+                       (call :put (format NIL "zones/~a/dns_records/~a" *zone* record) data)
+                       (call :post (format NIL "zones/~a/dns_records" *zone*) data)))))))))
+
+(main)
