@@ -59,11 +59,14 @@ exec $WG_MANAGER run "$0" "$@"
                (existing (find-record name)))
           (cond ((string-equal change "add")
                  (unless existing
+                   (format *error-output* "~&Adding record to Porkbun.~%")
                    (call :post (format NIL "dns/create/~a" *domain*) data)))
                 ((string-equal change "remove")
                  (when existing
+                   (format *error-output* "~&Removing record from Porkbun.~%")
                    (call :delete (format NIL "dns/delete/~a/~a" *domain* existing))))
                 ((string-equal change "edit")
+                 (format *error-output* "~&Updating record in Porkbun.~%")
                  (when existing
                    (call :delete (format NIL "dns/delete/~a/~a" *domain* existing)))
                  (call :post (format NIL "dns/create/~a" *domain*) data)))))))
