@@ -6,7 +6,7 @@ exec sbcl \
   --load "$0" \
   --eval "(wg-manager::main)" \
   --quit \
-  --end-toplevel-options "${@:1}"
+  --end-toplevel-options "$@"
 |#
 
 (defpackage #:wg-manager
@@ -422,6 +422,7 @@ To enable the connection automatically on boot:
   (read-config)
   (handler-case
       (destructuring-bind (self &optional (command "help") &rest args) sb-ext:*posix-argv*
+        (setf (uiop:getenv "WG_MANAGER") self)
         (cond ((command-p command "start")
                (handler-bind ((error (lambda (e)
                                        (format *debug-io* "[ERROR] ~a" e)
@@ -490,6 +491,8 @@ WantedBy=multi-user.target
                    (when stream (print-config stream)))
                  (when start (run NIL "systemctl" "start" unit))
                  (when enable (run NIL "systemctl" "enable" unit))))
+              ((command-p command "run" "eval" "exec")
+               (load (first args)))
               ((command-p command "config")
                (print-config *standard-output*))
               ((command-p command "help" "-h" "--help")
@@ -529,6 +532,8 @@ Command can be:
     --unit UNIT          --- The service unit name to use [wg-server]
     --start BOOLEAN      --- Whether to start the service [true]
     --enable BOOLEAN     --- Whether to enable the service [true]
+  run     --- Run a lisp script file. Useful for hooks.
+    FILE                 --- The file to load.
   config  --- Print the current configuration
   help    --- Show this help
 
@@ -559,6 +564,8 @@ The following configuration variables exist:
     CHANGE IPV4 NAME PUBLIC-KEY NOTE
                              Wherein CHANGE is one of: 
                                add remove edit
+                             The environment will have the WG_MANAGER
+                             variable set to this binary/script.
 
 Any configuration variables not part of this set will be re-exported
 as environment variables so that other hooks may make use of it.

@@ -6,4 +6,6 @@
   :depends-on (:postmodern
                :cl-qrencode
                :zippy
-               :drakma))
+               :drakma
+               :alexandria
+               :com.inuoe.jzon))
