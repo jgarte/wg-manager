@@ -72,6 +72,14 @@ exec sbcl \
        (when (/= 0 (sb-ext:process-exit-code (sb-ext:run-program program args :input input :output stream :error error :search T)))
          (error "Failed to run ~a~{ ~a~}~%  ~a" program args (get-output-stream-string error)))))))
 
+(defun ipv4< (a b)
+  (loop for ae in (uiop:split-string a :separator ".")
+        for be in (uiop:split-string b :separator ".")
+        for an = (parse-integer ae)
+        for bn = (parse-integer be)
+        do (cond ((< an bn) (return T))
+                 ((< bn an) (return NIL)))))
+
 (defun read-config-file (file)
   (flet ((process-var (var val)
            (cond ((string-equal var "WG_POSTGRES_HOST") (setf *postgres-host* val))
@@ -431,7 +439,7 @@ To enable the connection automatically on boot:
               ((command-p command "stop")
                (error "Not implemented lol"))
               ((command-p command "list" "ls")
-               (mapc #'print-peer (list-peers)))
+               (mapc #'print-peer (sort (list-peers) #'ipv4< :key (lambda (peer) (getf peer :ipv4)))))
               ((command-p command "show" "find")
                (let ((name (pop args)))
                  (unless name (error "PEER-NAME required"))
