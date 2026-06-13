@@ -64,11 +64,11 @@ exec $WG_MANAGER run "$0" "$@"
                 ((string-equal change "remove")
                  (when existing
                    (format *error-output* "~&Removing record from Porkbun.~%")
-                   (call :delete (format NIL "dns/delete/~a/~a" *domain* existing))))
+                   (call :post (format NIL "dns/delete/~a/~a" *domain* existing))))
                 ((string-equal change "edit")
                  (format *error-output* "~&Updating record in Porkbun.~%")
                  (when existing
-                   (call :delete (format NIL "dns/delete/~a/~a" *domain* existing)))
+                   (call :post (format NIL "dns/delete/~a/~a" *domain* existing)))
                  (call :post (format NIL "dns/create/~a" *domain*) data)))))))
 
 (main)
