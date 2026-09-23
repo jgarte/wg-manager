@@ -383,7 +383,7 @@ To enable the connection automatically on boot:
 (defun generate-qr (peer &key private-key path)
   (cl-qrencode:encode-png (generate-config peer :private-key private-key) :fpath path))
 
-(defun generate-user-package (peer file &key password)
+(defun generate-user-package (peer file &key password overwrite)
   (let* ((peer (ensure-peer peer))
          (name (getf peer :name))
          (zip (make-instance 'zippy:zip-file)))
@@ -399,7 +399,7 @@ To enable the connection automatically on boot:
         (add-file (generate-readme peer) "README.txt")
         (uiop:with-temporary-file (:pathname qr)
           (add-file (generate-qr peer :path qr) "QR.png")
-          (zippy:compress-zip zip (merge-pathnames file name) :password password))))))
+          (zippy:compress-zip zip (merge-pathnames file name) :password password :if-exists (if overwrite :supersede :error)))))))
 
 (defun run-hooks (change peer)
   (dolist (hook *hooks*)
@@ -457,7 +457,7 @@ To enable the connection automatically on boot:
                                 ((argument-p key "p" "-password") (setf package-pw val))
                                 (T (error "Unknown key argument ~a" key))))
                  (let ((peer (apply #'add-peer name add-args)))
-                   (when package (generate-user-package peer package :password package-pw))
+                   (when package (generate-user-package peer package :password package-pw :overwrite (getf add-args :overwrite)))
                    (format *standard-output* "~{~a: ~a~%~}" peer))))
               ((command-p command "remove" "rm")
                (remove-peer (or (first args) (error "PEER-NAME required"))))
